@@ -2,9 +2,8 @@
 """
 详见  https://langchain-ai.github.io/langgraph/tutorials/sql-agent/
 """
-from langchain_community.chat_models import ChatOpenAI
 from langchain_community.utilities import SQLDatabase
-from typing import Any, Annotated, Literal
+from typing import Any, Annotated
 
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableLambda, RunnableWithFallbacks
@@ -13,19 +12,9 @@ from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_ollama import OllamaLLM, ChatOllama
 
 from langchain_core.tools import tool
-from langchain_core.messages import AIMessage
 
-from pydantic import BaseModel, Field
-from typing_extensions import TypedDict
-
-from langgraph.graph import END, StateGraph, START
-from langgraph.graph.message import AnyMessage, add_messages
 from langchain_core.prompts import ChatPromptTemplate
 
-
-# Define the state for the agent
-class State(TypedDict):
-    messages: Annotated[list[AnyMessage], add_messages]
 
 def sql_expert(sql: str, llm_name, api_uri):
     query_check_system = """You are a SQL expert with a strong attention to detail.
@@ -52,29 +41,12 @@ def sql_expert(sql: str, llm_name, api_uri):
     # )
     # query_check.invoke({"messages": [("user", "SELECT * FROM Artist LIMIT 10;")]})
 
-
     query_check = query_check_prompt | ChatOllama(model=llm_name, base_url=api_uri).bind_tools(
         [db_query_tool]
     )
-    query_check.invoke({"messages": [("user", sql)]})
+    result = query_check.invoke({"messages": [("user", sql)]})
+    print("sql_expert: {}".format(result))
 
-
-# Add a node for the first tool call
-def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
-    return {
-        "messages": [
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "name": "sql_db_list_tables",
-                        "args": {},
-                        "id": "tool_abcd123",
-                    }
-                ],
-            )
-        ]
-    }
 
 @tool
 def db_query_tool(query: str) -> str:
@@ -143,10 +115,13 @@ def get_schema(jdbc_uri, llm_name, api_url):
 
     print("get_schema_tool: {}".format(get_schema_tool.invoke("a")))
 
+
 if __name__ == "__main__":
     db_uri = "sqlite:///test.db"
     # llm_name_str = "deepseekR17B"
-    llm_name_str = "deepseek-r1:14b"
+
+    #支持 tools工具调用功能
+    llm_name_str = "llama3.2:3B"
     api_uri_str = "http://127.0.0.1:11434"
     sql_str = "SELECT * FROM a LIMIT 10;"
     # get_data(db_uri)
