@@ -49,13 +49,13 @@ def sql_expert(sql: str, llm_name, api_uri):
 
 
 @tool
-def db_query_tool(query: str) -> str:
+def db_query_tool(query: str, jdbc_url: str) -> str:
     """
     Execute a SQL query against the database and get back the result.
     If the query is not correct, an error message will be returned.
     If an error is returned, rewrite the query, check the query, and try again.
     """
-    db = SQLDatabase.from_uri("sqlite:///test.db")
+    db = SQLDatabase.from_uri(jdbc_url)
     result = db.run_no_throw(query)
     if not result:
         return "Error: Query failed. Please rewrite your query and try again."
@@ -128,8 +128,8 @@ if __name__ == "__main__":
     # get_schema(db_uri, llm_name_str, api_uri)
 
     # test db_query_tool
-    # a = db_query_tool.invoke(sql_str)
-    # print("db_query_tool invoke {} , get {}".format(sql_str, a))
+    a = db_query_tool.invoke(sql_str, db_uri)
+    print("db_query_tool invoke {} , get {}".format(sql_str, a))
 
     # test sql expert to check sql
     sql_expert(sql_str, llm_name_str, api_uri_str)

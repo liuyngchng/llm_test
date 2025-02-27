@@ -7,6 +7,7 @@ from langchain_community.utilities import SQLDatabase
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableWithFallbacks, RunnableLambda
+from langchain_core.tools import tool
 from langchain_ollama import OllamaLLM, ChatOllama
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
@@ -17,8 +18,6 @@ from typing_extensions import TypedDict
 from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import AnyMessage, add_messages
 
-from read_db import db_query_tool, handle_tool_error
-
 # Define the state for the agent
 class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
@@ -28,6 +27,32 @@ class SubmitFinalAnswer(BaseModel):
     """Submit the final answer to the user based on the query results."""
 
     final_answer: str = Field(..., description="The final answer to the user")
+
+@tool
+def db_query_tool(query: str) -> str:
+    """
+    Execute a SQL query against the database and get back the result.
+    If the query is not correct, an error message will be returned.
+    If an error is returned, rewrite the query, check the query, and try again.
+    """
+    db = SQLDatabase.from_uri(db_uri)
+    result = db.run_no_throw(query)
+    if not result:
+        return "Error: Query failed. Please rewrite your query and try again."
+    return result
+
+def handle_tool_error(state) -> dict:
+    error = state.get("error")
+    tool_calls = state["messages"][-1].tool_calls
+    return {
+        "messages": [
+            ToolMessage(
+                content=f"Error: {repr(error)}\n please fix your mistakes.",
+                tool_call_id=tc["id"],
+            )
+            for tc in tool_calls
+        ]
+    }
 
 def create_tool_node_with_fallback(tools: list) -> RunnableWithFallbacks[Any, dict]:
     """
@@ -91,7 +116,36 @@ def model_check_query(state: State) -> dict[str, list[AIMessage]]:
     return {"messages": [query_check.invoke({"messages": [state["messages"][-1]]})]}
 
 def query_gen_node(state: State):
-    message = get_query_gen(llm_name_str).invoke(state)
+    # Add a node for a model to generate a query based on the question and schema
+    query_gen_system = """You are a SQL expert with a strong attention to detail.
+    
+    Given an input question, output a syntactically correct SQLite query to run, then look at the results of the query and return the answer.
+    
+    DO NOT call any tool besides SubmitFinalAnswer to submit the final answer.
+    
+    When generating the query:
+    
+    Output the SQL query that answers the input question without a tool call.
+    
+    Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most 5 results.
+    You can order the results by a relevant column to return the most interesting examples in the database.
+    Never query for all the columns from a specific table, only ask for the relevant columns given the question.
+    
+    If you get an error while executing a query, rewrite the query and try again.
+    
+    If you get an empty result set, you should try to rewrite the query to get a non-empty result set. 
+    NEVER make stuff up if you don't have enough information to answer the query... just say you don't have enough information.
+    
+    If you have enough information to answer the input question, simply invoke the appropriate tool to submit the final answer to the user.
+    
+    DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database."""
+    query_gen_prompt = ChatPromptTemplate.from_messages(
+        [("system", query_gen_system), ("placeholder", "{messages}")]
+    )
+    query_gen = query_gen_prompt | ChatOllama(model=llm_name_str, temperature=0).bind_tools(
+        [SubmitFinalAnswer]
+    )
+    message = query_gen.invoke(state)
 
     # Sometimes, the LLM will hallucinate and call the wrong tool. We need to catch this and return an error message.
     tool_messages = []
@@ -120,37 +174,9 @@ def should_continue(state: State) -> Literal[END, "correct_query", "query_gen"]:
     else:
         return "correct_query"
 
-def get_query_gen(llm_name: str):
-    # Add a node for a model to generate a query based on the question and schema
-    query_gen_system = """You are a SQL expert with a strong attention to detail.
-    
-    Given an input question, output a syntactically correct SQLite query to run, then look at the results of the query and return the answer.
-    
-    DO NOT call any tool besides SubmitFinalAnswer to submit the final answer.
-    
-    When generating the query:
-    
-    Output the SQL query that answers the input question without a tool call.
-    
-    Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most 5 results.
-    You can order the results by a relevant column to return the most interesting examples in the database.
-    Never query for all the columns from a specific table, only ask for the relevant columns given the question.
-    
-    If you get an error while executing a query, rewrite the query and try again.
-    
-    If you get an empty result set, you should try to rewrite the query to get a non-empty result set. 
-    NEVER make stuff up if you don't have enough information to answer the query... just say you don't have enough information.
-    
-    If you have enough information to answer the input question, simply invoke the appropriate tool to submit the final answer to the user.
-    
-    DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database."""
-    query_gen_prompt = ChatPromptTemplate.from_messages(
-        [("system", query_gen_system), ("placeholder", "{messages}")]
-    )
-    query_gen = query_gen_prompt | ChatOllama(model=llm_name, temperature=0).bind_tools(
-        [SubmitFinalAnswer]
-    )
-    return query_gen
+# def get_query_gen():
+
+    # return query_gen
 
 def get_workflow(jdbc_uri, llm_name, api_url) -> "CompiledStateGraph":
 
@@ -210,14 +236,14 @@ def get_workflow(jdbc_uri, llm_name, api_url) -> "CompiledStateGraph":
 
 
 if __name__ == "__main__":
-    db_uri = "sqlite:///test.db"
+    db_uri = "sqlite:///test1.db"
     llm_name_str = "llama3.2:3B"
     api_uri_str = "http://127.0.0.1:11434"
-    sql_str = "SELECT * FROM a LIMIT 10;"
     app = get_workflow(db_uri, llm_name_str, api_uri_str)
     question = "Which sales agent made the most in sales in 2009?"
     messages = app.invoke(
-        {"messages": [("user", question)]}
+        {"messages": [("user", question)]},
+        {"recursion_limit":30 }
     )
     json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
     json_str
