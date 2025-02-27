@@ -1,32 +1,18 @@
 #! /usr/bin/python3
 
-from typing import Any
-
-from langchain_core.messages import ToolMessage
-from langchain_core.runnables import RunnableLambda, RunnableWithFallbacks
-from langgraph.prebuilt import ToolNode
-
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
-from langchain_ollama import ChatOllama
-
 from langchain_community.utilities import SQLDatabase
-
 from typing import Any
-
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableLambda, RunnableWithFallbacks
 from langgraph.prebuilt import ToolNode
 from langchain_core.tools import tool
 from langchain_core.prompts import ChatPromptTemplate
-
 from typing import Annotated, Literal
-
 from langchain_core.messages import AIMessage
 from langchain_ollama import ChatOllama
-
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
-
 from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import AnyMessage, add_messages
 
