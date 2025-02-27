@@ -166,10 +166,10 @@ if __name__ == "__main__":
     db.run("SELECT * FROM customer_info LIMIT 10;")
 
     toolkit = SQLDatabaseToolkit(db=db, llm=ChatOllama(model="llama3.2:3B"))
-    tools = toolkit.get_tools()
+    toolkit_tools = toolkit.get_tools()
 
-    list_tables_tool = next(tool for tool in tools if tool.name == "sql_db_list_tables")
-    get_schema_tool = next(tool for tool in tools if tool.name == "sql_db_schema")
+    list_tables_tool = next(tool for tool in toolkit_tools if tool.name == "sql_db_list_tables")
+    get_schema_tool = next(tool for tool in toolkit_tools if tool.name == "sql_db_schema")
 
     print("test list_tables_tool")
     print(list_tables_tool.invoke(""))
