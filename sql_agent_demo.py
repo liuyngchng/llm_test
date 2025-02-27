@@ -17,7 +17,29 @@ from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableLambda, RunnableWithFallbacks
 from langgraph.prebuilt import ToolNode
 from langchain_core.tools import tool
+from langchain_core.prompts import ChatPromptTemplate
 
+from typing import Annotated, Literal
+
+from langchain_core.messages import AIMessage
+from langchain_ollama import ChatOllama
+
+from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
+
+from langgraph.graph import END, StateGraph, START
+from langgraph.graph.message import AnyMessage, add_messages
+
+
+# Define the state for the agent
+class State(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
+
+# Describe a tool to represent the end state
+class SubmitFinalAnswer(BaseModel):
+    """Submit the final answer to the user based on the query results."""
+
+    final_answer: str = Field(..., description="The final answer to the user")
 
 def create_tool_node_with_fallback(tools: list) -> RunnableWithFallbacks[Any, dict]:
     """
@@ -75,76 +97,6 @@ def handle_tool_error(state) -> dict:
         ]
     }
 
-db = SQLDatabase.from_uri("sqlite:///Chinook.db")
-print(db.dialect)
-print(db.get_usable_table_names())
-db.run("SELECT * FROM Artist LIMIT 10;")
-
-toolkit = SQLDatabaseToolkit(db=db, llm=ChatOllama(model="llama3.2:3B"))
-tools = toolkit.get_tools()
-
-list_tables_tool = next(tool for tool in tools if tool.name == "sql_db_list_tables")
-get_schema_tool = next(tool for tool in tools if tool.name == "sql_db_schema")
-
-print(list_tables_tool.invoke(""))
-
-print(get_schema_tool.invoke("Artist"))
-
-
-
-
-
-
-print(db_query_tool.invoke("SELECT * FROM Artist LIMIT 10;"))
-
-from langchain_core.prompts import ChatPromptTemplate
-
-query_check_system = """You are a SQL expert with a strong attention to detail.
-Double check the SQLite query for common mistakes, including:
-- Using NOT IN with NULL values
-- Using UNION when UNION ALL should have been used
-- Using BETWEEN for exclusive ranges
-- Data type mismatch in predicates
-- Properly quoting identifiers
-- Using the correct number of arguments for functions
-- Casting to the correct data type
-- Using the proper columns for joins
-
-If there are any of the above mistakes, rewrite the query. If there are no mistakes, just reproduce the original query.
-
-You will call the appropriate tool to execute the query after running this check."""
-
-query_check_prompt = ChatPromptTemplate.from_messages(
-    [("system", query_check_system), ("placeholder", "{messages}")]
-)
-query_check = query_check_prompt | ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
-    [db_query_tool], tool_choice="required"
-)
-
-query_check.invoke({"messages": [("user", "SELECT * FROM Artist LIMIT 10;")]})
-
-
-from typing import Annotated, Literal
-
-from langchain_core.messages import AIMessage
-from langchain_ollama import ChatOllama
-
-from pydantic import BaseModel, Field
-from typing_extensions import TypedDict
-
-from langgraph.graph import END, StateGraph, START
-from langgraph.graph.message import AnyMessage, add_messages
-
-
-# Define the state for the agent
-class State(TypedDict):
-    messages: Annotated[list[AnyMessage], add_messages]
-
-
-# Define a new graph
-workflow = StateGraph(State)
-
-
 # Add a node for the first tool call
 def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
     return {
@@ -169,65 +121,6 @@ def model_check_query(state: State) -> dict[str, list[AIMessage]]:
     """
     return {"messages": [query_check.invoke({"messages": [state["messages"][-1]]})]}
 
-
-workflow.add_node("first_tool_call", first_tool_call)
-
-# Add nodes for the first two tools
-workflow.add_node(
-    "list_tables_tool", create_tool_node_with_fallback([list_tables_tool])
-)
-workflow.add_node("get_schema_tool", create_tool_node_with_fallback([get_schema_tool]))
-
-# Add a node for a model to choose the relevant tables based on the question and available tables
-model_get_schema = ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
-    [get_schema_tool]
-)
-workflow.add_node(
-    "model_get_schema",
-    lambda state: {
-        "messages": [model_get_schema.invoke(state["messages"])],
-    },
-)
-
-
-# Describe a tool to represent the end state
-class SubmitFinalAnswer(BaseModel):
-    """Submit the final answer to the user based on the query results."""
-
-    final_answer: str = Field(..., description="The final answer to the user")
-
-
-# Add a node for a model to generate a query based on the question and schema
-query_gen_system = """You are a SQL expert with a strong attention to detail.
-
-Given an input question, output a syntactically correct SQLite query to run, then look at the results of the query and return the answer.
-
-DO NOT call any tool besides SubmitFinalAnswer to submit the final answer.
-
-When generating the query:
-
-Output the SQL query that answers the input question without a tool call.
-
-Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most 5 results.
-You can order the results by a relevant column to return the most interesting examples in the database.
-Never query for all the columns from a specific table, only ask for the relevant columns given the question.
-
-If you get an error while executing a query, rewrite the query and try again.
-
-If you get an empty result set, you should try to rewrite the query to get a non-empty result set. 
-NEVER make stuff up if you don't have enough information to answer the query... just say you don't have enough information.
-
-If you have enough information to answer the input question, simply invoke the appropriate tool to submit the final answer to the user.
-
-DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database."""
-query_gen_prompt = ChatPromptTemplate.from_messages(
-    [("system", query_gen_system), ("placeholder", "{messages}")]
-)
-query_gen = query_gen_prompt | ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
-    [SubmitFinalAnswer]
-)
-
-
 def query_gen_node(state: State):
     message = query_gen.invoke(state)
 
@@ -246,16 +139,6 @@ def query_gen_node(state: State):
         tool_messages = []
     return {"messages": [message] + tool_messages}
 
-
-workflow.add_node("query_gen", query_gen_node)
-
-# Add a node for the model to check the query before executing it
-workflow.add_node("correct_query", model_check_query)
-
-# Add node for executing the query
-workflow.add_node("execute_query", create_tool_node_with_fallback([db_query_tool]))
-
-
 # Define a conditional edge to decide whether to continue or end the workflow
 def should_continue(state: State) -> Literal[END, "correct_query", "query_gen"]:
     messages = state["messages"]
@@ -268,44 +151,149 @@ def should_continue(state: State) -> Literal[END, "correct_query", "query_gen"]:
     else:
         return "correct_query"
 
+if __name__ == "__main__":
+    # db = SQLDatabase.from_uri("sqlite:///Chinook.db")
+    db_user = "test"
+    db_password = "test"
+    db_host = "127.0.0.1"
+    db_name = "test"
+    db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}")
+    print(db.dialect)
+    print(db.get_usable_table_names())
+    db.run("SELECT * FROM customer_info LIMIT 10;")
 
-# Specify the edges between the nodes
-workflow.add_edge(START, "first_tool_call")
-workflow.add_edge("first_tool_call", "list_tables_tool")
-workflow.add_edge("list_tables_tool", "model_get_schema")
-workflow.add_edge("model_get_schema", "get_schema_tool")
-workflow.add_edge("get_schema_tool", "query_gen")
-workflow.add_conditional_edges(
-    "query_gen",
-    should_continue,
-)
-workflow.add_edge("correct_query", "execute_query")
-workflow.add_edge("execute_query", "query_gen")
+    toolkit = SQLDatabaseToolkit(db=db, llm=ChatOllama(model="llama3.2:3B"))
+    tools = toolkit.get_tools()
 
-# Compile the workflow into a runnable
-app = workflow.compile()
+    list_tables_tool = next(tool for tool in tools if tool.name == "sql_db_list_tables")
+    get_schema_tool = next(tool for tool in tools if tool.name == "sql_db_schema")
+
+    print("test list_tables_tool")
+    print(list_tables_tool.invoke(""))
+    print("test get_schema_tool")
+    print(get_schema_tool.invoke("customer_info"))
+    print("test db_query_tool")
+    print(db_query_tool.invoke("SELECT * FROM customer_info LIMIT 3;"))
+    query_check_system = """You are a MySQL expert with a strong attention to detail.
+    Double check the MySQL query for common mistakes, including:
+    - Using NOT IN with NULL values
+    - Using UNION when UNION ALL should have been used
+    - Using BETWEEN for exclusive ranges
+    - Data type mismatch in predicates
+    - Properly quoting identifiers
+    - Using the correct number of arguments for functions
+    - Casting to the correct data type
+    - Using the proper columns for joins
+    
+    If there are any of the above mistakes, rewrite the query. If there are no mistakes, just reproduce the original query.
+    
+    You will call the appropriate tool to execute the query after running this check."""
+
+    query_check_prompt = ChatPromptTemplate.from_messages(
+        [("system", query_check_system), ("placeholder", "{messages}")]
+    )
+    query_check = query_check_prompt | ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
+        [db_query_tool], tool_choice="required"
+    )
+
+    q_c_r = query_check.invoke({"messages": [("user", "SELECT * FROM customer_info LIMIT 10;")]})
+    print("test query_check: {}".format(q_c_r))
+    # Define a new graph
+    workflow = StateGraph(State)
+    workflow.add_node("first_tool_call", first_tool_call)
+
+    # Add nodes for the first two tools
+    workflow.add_node(
+        "list_tables_tool", create_tool_node_with_fallback([list_tables_tool])
+    )
+    workflow.add_node("get_schema_tool", create_tool_node_with_fallback([get_schema_tool]))
+
+    # Add a node for a model to choose the relevant tables based on the question and available tables
+    model_get_schema = ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
+        [get_schema_tool]
+    )
+    workflow.add_node(
+        "model_get_schema",
+        lambda state: {
+            "messages": [model_get_schema.invoke(state["messages"])],
+        },
+    )
+
+    # Add a node for a model to generate a query based on the question and schema
+    query_gen_system = """You are a MySQL database expert with a strong attention to detail.
+    
+    Given an input question, output a syntactically correct MySQL query to run, then look at the results of the query and return the answer.
+    
+    DO NOT call any tool besides SubmitFinalAnswer to submit the final answer.
+    
+    When generating the query:
+    
+    Output the SQL query that answers the input question without a tool call.
+    
+    Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most 5 results.
+    You can order the results by a relevant column to return the most interesting examples in the database.
+    Never query for all the columns from a specific table, only ask for the relevant columns given the question.
+    
+    If you get an error while executing a query, rewrite the query and try again.
+    
+    If you get an empty result set, you should try to rewrite the query to get a non-empty result set. 
+    NEVER make stuff up if you don't have enough information to answer the query... just say you don't have enough information.
+    
+    If you have enough information to answer the input question, simply invoke the appropriate tool to submit the final answer to the user.
+    
+    DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database."""
+    query_gen_prompt = ChatPromptTemplate.from_messages(
+        [("system", query_gen_system), ("placeholder", "{messages}")]
+    )
+    query_gen = query_gen_prompt | ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
+        [SubmitFinalAnswer]
+    )
+
+    workflow.add_node("query_gen", query_gen_node)
+
+    # Add a node for the model to check the query before executing it
+    workflow.add_node("correct_query", model_check_query)
+
+    # Add node for executing the query
+    workflow.add_node("execute_query", create_tool_node_with_fallback([db_query_tool]))
+
+    # Specify the edges between the nodes
+    workflow.add_edge(START, "first_tool_call")
+    workflow.add_edge("first_tool_call", "list_tables_tool")
+    workflow.add_edge("list_tables_tool", "model_get_schema")
+    workflow.add_edge("model_get_schema", "get_schema_tool")
+    workflow.add_edge("get_schema_tool", "query_gen")
+    workflow.add_conditional_edges(
+        "query_gen",
+        should_continue,
+    )
+    workflow.add_edge("correct_query", "execute_query")
+    workflow.add_edge("execute_query", "query_gen")
+
+    # Compile the workflow into a runnable
+    app = workflow.compile()
 
 
-# from IPython.display import Image, display
-# from langchain_core.runnables.graph import MermaidDrawMethod
-#
-# display(
-#     Image(
-#         app.get_graph().draw_mermaid_png(
-#             draw_method=MermaidDrawMethod.API,
-#         )
-#     )
-# )
+    # from IPython.display import Image, display
+    # from langchain_core.runnables.graph import MermaidDrawMethod
+    #
+    # display(
+    #     Image(
+    #         app.get_graph().draw_mermaid_png(
+    #             draw_method=MermaidDrawMethod.API,
+    #         )
+    #     )
+    # )
 
-user_question = "Which sales agent made the most in sales in 2009?"
-print("invoke question {}".format(user_question))
-messages = app.invoke(
-    {"messages": [("user", user_question)]}
-)
-json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
-json_str
+    user_question = "姓名为阿甘的客户的地址是什么？"
+    print("invoke question: {}".format(user_question))
+    messages = app.invoke(
+        {"messages": [("user", user_question)]}
+    )
+    json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
+    json_str
 
-for event in app.stream(
-        {"messages": [("user", "Which sales agent made the most in sales in 2009?")]}
-):
-    print(event)
+    for event in app.stream(
+            {"messages": [("user", user_question)]}
+    ):
+        print(event)
