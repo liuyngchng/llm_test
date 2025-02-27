@@ -157,7 +157,7 @@ if __name__ == "__main__":
     db_password = "test"
     db_host = "127.0.0.1"
     db_name = "test"
-    db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}")
+    db = SQLDatabase.from_uri("mysql+pymysql://{}:{}@{}/{}".format(db_user, db_password, db_host, db_name))
     print(db.dialect)
     print(db.get_usable_table_names())
     db.run("SELECT * FROM customer_info LIMIT 10;")
@@ -273,9 +273,9 @@ if __name__ == "__main__":
     # Compile the workflow into a runnable
     app = workflow.compile()
 
-
-    # from IPython.display import Image, display
-    # from langchain_core.runnables.graph import MermaidDrawMethod
+    print("draw the graph")
+    from IPython.display import Image, display
+    from langchain_core.runnables.graph import MermaidDrawMethod
     #
     # display(
     #     Image(
@@ -284,6 +284,14 @@ if __name__ == "__main__":
     #         )
     #     )
     # )
+    img = Image(
+        app.get_graph().draw_mermaid_png(
+            draw_method=MermaidDrawMethod.API,
+        )
+    )
+
+    with open("sql_agent_demo.png", "wb") as f:
+        f.write(img.data)
 
     user_question = "姓名为阿甘的客户的地址是什么？"
     print("invoke question: {}".format(user_question))
