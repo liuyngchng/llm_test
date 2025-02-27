@@ -152,12 +152,15 @@ def should_continue(state: State) -> Literal[END, "correct_query", "query_gen"]:
         return "correct_query"
 
 if __name__ == "__main__":
-    # db = SQLDatabase.from_uri("sqlite:///Chinook.db")
-    db_user = "test"
-    db_password = "test"
-    db_host = "127.0.0.1"
-    db_name = "test"
-    db = SQLDatabase.from_uri("mysql+pymysql://{}:{}@{}/{}".format(db_user, db_password, db_host, db_name))
+    # use SQLite DB
+    db = SQLDatabase.from_uri("sqlite:///Chinook.db")
+
+    # use MySQL DB
+    # db_user = "test"
+    # db_password = "test"
+    # db_host = "127.0.0.1"
+    # db_name = "test"
+    # db = SQLDatabase.from_uri("mysql+pymysql://{}:{}@{}/{}".format(db_user, db_password, db_host, db_name))
     print(db.dialect)
     print(db.get_usable_table_names())
     db.run("SELECT * FROM customer_info LIMIT 10;")
@@ -174,8 +177,8 @@ if __name__ == "__main__":
     print(get_schema_tool.invoke("customer_info"))
     print("test db_query_tool")
     print(db_query_tool.invoke("SELECT * FROM customer_info LIMIT 3;"))
-    query_check_system = """You are a MySQL expert with a strong attention to detail.
-    Double check the MySQL query for common mistakes, including:
+    query_check_system = """You are a SQLite expert with a strong attention to detail.
+    Double check the SQLite query for common mistakes, including:
     - Using NOT IN with NULL values
     - Using UNION when UNION ALL should have been used
     - Using BETWEEN for exclusive ranges
@@ -220,9 +223,9 @@ if __name__ == "__main__":
     )
 
     # Add a node for a model to generate a query based on the question and schema
-    query_gen_system = """You are a MySQL database expert with a strong attention to detail.
+    query_gen_system = """You are a SQLite database expert with a strong attention to detail.
     
-    Given an input question, output a syntactically correct MySQL query to run, then look at the results of the query and return the answer.
+    Given an input question, output a syntactically correct SQLite query to run, then look at the results of the query and return the answer.
     
     DO NOT call any tool besides SubmitFinalAnswer to submit the final answer.
     
@@ -272,11 +275,11 @@ if __name__ == "__main__":
 
     # Compile the workflow into a runnable
     app = workflow.compile()
-
-    print("draw the graph")
+    img_name = "sql_agent_demo.png"
+    print("draw the graph to local file {}".format(img_name))
     from IPython.display import Image, display
     from langchain_core.runnables.graph import MermaidDrawMethod
-    #
+    # display image in Jupyter
     # display(
     #     Image(
     #         app.get_graph().draw_mermaid_png(
@@ -284,24 +287,25 @@ if __name__ == "__main__":
     #         )
     #     )
     # )
-    img = Image(
-        app.get_graph().draw_mermaid_png(
-            draw_method=MermaidDrawMethod.API,
-        )
-    )
 
-    with open("sql_agent_demo.png", "wb") as f:
-        f.write(img.data)
+    # save file to local file
+    # img = Image(
+    #     app.get_graph().draw_mermaid_png(
+    #         draw_method=MermaidDrawMethod.API,
+    #     )
+    # )
+    # with open(img_name, "wb") as f:
+    #     f.write(img.data)
 
-    user_question = "姓名为阿甘的客户的地址是什么？"
+    user_question = "what is the address of customer named Leonie?"
     print("invoke question: {}".format(user_question))
-    messages = app.invoke(
-        {"messages": [("user", user_question)]}
-    )
-    json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
-    json_str
+    # messages = app.invoke(
+    #     {"messages": [("user", user_question)]}
+    # )
+    # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
+    # json_str
 
     for event in app.stream(
-            {"messages": [("user", user_question)]}
+            {"messages": [("user", user_question)]}, {"recursion_limit":5 }
     ):
         print(event)
