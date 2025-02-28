@@ -65,9 +65,13 @@ def create_tool_node_with_fallback(tools: list) -> RunnableWithFallbacks[Any, di
     """
     Create a ToolNode with a fallback to handle errors and surface them to the agent.
     """
-    return ToolNode(tools).with_fallbacks(
+    print("input_in_create_tool_node_with_fallback", tools)
+    create_tool_node_with_fallback_result = ToolNode(tools).with_fallbacks(
         [RunnableLambda(handle_tool_error)], exception_key="error"
     )
+    print("output_in_create_tool_node_with_fallback", create_tool_node_with_fallback_result)
+    return create_tool_node_with_fallback_result
+
 
 
 def handle_tool_error(state) -> dict:
@@ -85,7 +89,8 @@ def handle_tool_error(state) -> dict:
 
 # Add a node for the first tool call
 def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
-    return {
+    print("input_in_first_tool_call:", state)
+    first_tool_call_result= {
         "messages": [
             AIMessage(
                 content="",
@@ -99,7 +104,25 @@ def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
             )
         ]
     }
+    print("output_in_first_tool_call:", first_tool_call_result)
+    return first_tool_call_result
 
+# def node_test(state: State) -> dict[str, list[AIMessage]]:
+#     print("########state_in_node_is######## {}".format(state))
+#     return {"messages": ["this is a test message"]}
+
+def model_get_schema_call(state: State) -> dict[str, list[AIMessage]]:
+    print("input_in_model_get_schema_call:", state)
+    # Add a node for a model to choose the relevant tables based on the question and available tables
+    model_get_schema = ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
+        [get_schema_tool]
+    )
+    print('model_get_schema_invoke({})'.format(state["messages"][2].content))
+    model_get_schema_call_result = {
+        "messages": [model_get_schema.invoke(state["messages"][2].content)]
+    }
+    print("output_in_model_get_schema_call:", model_get_schema_call_result)
+    return model_get_schema_call_result
 
 def model_check_query(state: State) -> dict[str, list[AIMessage]]:
     """
@@ -147,8 +170,8 @@ if __name__ == "__main__":
     # db_host = "127.0.0.1"
     # db_name = "test"
     # db = SQLDatabase.from_uri("mysql+pymysql://{}:{}@{}/{}".format(db_user, db_password, db_host, db_name))
-    print(db.dialect)
-    print(db.get_usable_table_names())
+    print("db dialect is: {}".format(db.dialect))
+    print("db tables is: {}".format(db.get_usable_table_names()))
     db.run("SELECT * FROM customer_info LIMIT 10;")
 
     toolkit = SQLDatabaseToolkit(db=db, llm=ChatOllama(model="llama3.2:3B"))
@@ -157,12 +180,18 @@ if __name__ == "__main__":
     list_tables_tool = next(tool for tool in toolkit_tools if tool.name == "sql_db_list_tables")
     get_schema_tool = next(tool for tool in toolkit_tools if tool.name == "sql_db_schema")
 
-    print("test list_tables_tool")
-    print(list_tables_tool.invoke(""))
-    print("test get_schema_tool")
-    print(get_schema_tool.invoke("customer_info"))
-    print("test db_query_tool")
-    print(db_query_tool.invoke("SELECT * FROM customer_info LIMIT 3;"))
+    # for test list_tables_tool
+    # print("test list_tables_tool")
+    # print(list_tables_tool.invoke(""))
+
+    #for test get_schema_tool
+    # print("test get_schema_tool")
+    # print(get_schema_tool.invoke("customer_info"))
+
+    # for test db_query_tool
+    # print("test db_query_tool")
+    # print(db_query_tool.invoke("SELECT * FROM customer_info LIMIT 3;"))
+
     query_check_system = """You are a SQLite expert with a strong attention to detail.
     Double check the SQLite query for common mistakes, including:
     - Using NOT IN with NULL values
@@ -185,8 +214,10 @@ if __name__ == "__main__":
         [db_query_tool], tool_choice="required"
     )
 
-    q_c_r = query_check.invoke({"messages": [("user", "SELECT * FROM customer_info LIMIT 10;")]})
-    print("test query_check: {}".format(q_c_r))
+    # for test purpose query_check only
+    # q_c_r = query_check.invoke({"messages": [("user", "SELECT * FROM customer_info LIMIT 10;")]})
+    # print("test query_check: {}".format(q_c_r))
+
     # Define a new graph
     workflow = StateGraph(State)
     workflow.add_node("first_tool_call", first_tool_call)
@@ -195,18 +226,15 @@ if __name__ == "__main__":
     workflow.add_node(
         "list_tables_tool", create_tool_node_with_fallback([list_tables_tool])
     )
+
+    # a test node for check node status
+    # workflow.add_node("node_check_call", node_test)
+
+
     workflow.add_node("get_schema_tool", create_tool_node_with_fallback([get_schema_tool]))
 
-    # Add a node for a model to choose the relevant tables based on the question and available tables
-    model_get_schema = ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
-        [get_schema_tool]
-    )
-    workflow.add_node(
-        "model_get_schema",
-        lambda state: {
-            "messages": [model_get_schema.invoke(state["messages"])],
-        },
-    )
+
+    workflow.add_node("model_get_schema",model_get_schema_call)
 
     # Add a node for a model to generate a query based on the question and schema
     query_gen_system = """You are a SQLite database expert with a strong attention to detail.
@@ -249,6 +277,11 @@ if __name__ == "__main__":
     # Specify the edges between the nodes
     workflow.add_edge(START, "first_tool_call")
     workflow.add_edge("first_tool_call", "list_tables_tool")
+
+    # for test purpose
+    # workflow.add_edge("list_tables_tool", "node_check_call")
+    # workflow.add_edge("node_check_call", "model_get_schema")
+
     workflow.add_edge("list_tables_tool", "model_get_schema")
     workflow.add_edge("model_get_schema", "get_schema_tool")
     workflow.add_edge("get_schema_tool", "query_gen")
@@ -283,15 +316,15 @@ if __name__ == "__main__":
     # with open(img_name, "wb") as f:
     #     f.write(img.data)
 
-    user_question = "what is the address of customer named Leonie?"
+    user_question = "请在表格 customer_info 中查询名称为 Manoj 的客户地址"
     print("invoke question: {}".format(user_question))
     # messages = app.invoke(
-    #     {"messages": [("user", user_question)]}
+    #     {"messages": [("user", user_question)]}, {"recursion_limit":100 }
     # )
     # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
     # json_str
 
     for event in app.stream(
-            {"messages": [("user", user_question)]}, {"recursion_limit":5 }
+            {"messages": [("user", user_question)]}, {"recursion_limit":10 }
     ):
         print(event)
