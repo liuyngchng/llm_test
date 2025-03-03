@@ -316,7 +316,7 @@ if __name__ == "__main__":
     # with open(img_name, "wb") as f:
     #     f.write(img.data)
 
-    user_question = "请在表格 customer_info 中查询名称为 Manoj 的客户地址"
+    user_question = "查询姓名为 Manoj 的客户地址"
     print("invoke question: {}".format(user_question))
     # messages = app.invoke(
     #     {"messages": [("user", user_question)]}, {"recursion_limit":100 }
