@@ -15,7 +15,7 @@ def req_with_vector_db():
     bge_dir = "../bge-large-zh-v1.5"
     api_url = "http://127.0.0.1:11434"
     faiss_index = "./faiss_index"
-    question = "请问刘纾赫是谁？"
+    question = "who is the guy?"
     llm_name = "deepseekR17B"
 
     # 加载配置

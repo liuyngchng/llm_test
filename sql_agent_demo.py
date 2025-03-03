@@ -65,11 +65,11 @@ def create_tool_node_with_fallback(tools: list) -> RunnableWithFallbacks[Any, di
     """
     Create a ToolNode with a fallback to handle errors and surface them to the agent.
     """
-    print("input_in_create_tool_node_with_fallback", tools)
+    # print("input_in_create_tool_node_with_fallback", tools)
     create_tool_node_with_fallback_result = ToolNode(tools).with_fallbacks(
         [RunnableLambda(handle_tool_error)], exception_key="error"
     )
-    print("output_in_create_tool_node_with_fallback", create_tool_node_with_fallback_result)
+    # print("output_in_create_tool_node_with_fallback", create_tool_node_with_fallback_result)
     return create_tool_node_with_fallback_result
 
 
@@ -89,7 +89,7 @@ def handle_tool_error(state) -> dict:
 
 # Add a node for the first tool call
 def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
-    print("input_in_first_tool_call:", state)
+    # print("input_in_first_tool_call:", state)
     first_tool_call_result= {
         "messages": [
             AIMessage(
@@ -104,7 +104,7 @@ def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
             )
         ]
     }
-    print("output_in_first_tool_call:", first_tool_call_result)
+    # print("output_in_first_tool_call:", first_tool_call_result)
     return first_tool_call_result
 
 # def node_test(state: State) -> dict[str, list[AIMessage]]:
@@ -112,16 +112,16 @@ def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
 #     return {"messages": ["this is a test message"]}
 
 def model_get_schema_call(state: State) -> dict[str, list[AIMessage]]:
-    print("input_in_model_get_schema_call:", state)
+    # print("input_in_model_get_schema_call:", state)
     # Add a node for a model to choose the relevant tables based on the question and available tables
     model_get_schema = ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
         [get_schema_tool]
     )
-    print('model_get_schema_invoke({})'.format(state["messages"][2].content))
+    # print('model_get_schema_invoke({})'.format(state["messages"][2].content))
     model_get_schema_call_result = {
         "messages": [model_get_schema.invoke(state["messages"][2].content)]
     }
-    print("output_in_model_get_schema_call:", model_get_schema_call_result)
+    # print("output_in_model_get_schema_call:", model_get_schema_call_result)
     return model_get_schema_call_result
 
 def model_check_query(state: State) -> dict[str, list[AIMessage]]:
@@ -151,18 +151,20 @@ def query_gen_node(state: State):
 # Define a conditional edge to decide whether to continue or end the workflow
 def should_continue(state: State) -> Literal[END, "correct_query", "query_gen"]:
     messages = state["messages"]
+    # print("messages_in_should_continue: {}".format(messages))
     last_message = messages[-1]
+    return END;
     # If there is a tool call, then we finish
-    if getattr(last_message, "tool_calls", None):
-        return END
-    if last_message.content.startswith("Error:"):
-        return "query_gen"
-    else:
-        return "correct_query"
+    # if getattr(last_message, "tool_calls", None):
+    #     return END
+    # if last_message.content.startswith("Error:"):
+    #     return "query_gen"
+    # else:
+    #     return "correct_query"
 
 if __name__ == "__main__":
     # use SQLite DB
-    db = SQLDatabase.from_uri("sqlite:///Chinook.db")
+    db = SQLDatabase.from_uri("sqlite:///test2.db")
 
     # use MySQL DB
     # db_user = "test"
@@ -318,13 +320,14 @@ if __name__ == "__main__":
 
     user_question = "查询姓名为 Manoj 的客户地址"
     print("invoke question: {}".format(user_question))
-    # messages = app.invoke(
-    #     {"messages": [("user", user_question)]}, {"recursion_limit":100 }
-    # )
+    messages = app.invoke(
+        {"messages": [("user", user_question)]}, {"recursion_limit":100 }
+    )
     # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
-    # json_str
+    json_str = messages["messages"][-1].content
+    print("answer is : {}".format(json_str))
 
-    for event in app.stream(
-            {"messages": [("user", user_question)]}, {"recursion_limit":10 }
-    ):
-        print(event)
+    # for event in app.stream(
+    #         {"messages": [("user", user_question)]}, {"recursion_limit":10 }
+    # ):
+    #     print(event)
