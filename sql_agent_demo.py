@@ -280,10 +280,6 @@ if __name__ == "__main__":
     workflow.add_edge(START, "first_tool_call")
     workflow.add_edge("first_tool_call", "list_tables_tool")
 
-    # for test purpose
-    # workflow.add_edge("list_tables_tool", "node_check_call")
-    # workflow.add_edge("node_check_call", "model_get_schema")
-
     workflow.add_edge("list_tables_tool", "model_get_schema")
     workflow.add_edge("model_get_schema", "get_schema_tool")
     workflow.add_edge("get_schema_tool", "query_gen")
@@ -296,28 +292,9 @@ if __name__ == "__main__":
 
     # Compile the workflow into a runnable
     app = workflow.compile()
-    img_name = "sql_agent_demo.png"
-    print("draw the graph to local file {}".format(img_name))
-    from IPython.display import Image, display
-    from langchain_core.runnables.graph import MermaidDrawMethod
-    # display image in Jupyter
-    # display(
-    #     Image(
-    #         app.get_graph().draw_mermaid_png(
-    #             draw_method=MermaidDrawMethod.API,
-    #         )
-    #     )
-    # )
-
-    # save file to local file
-    # img = Image(
-    #     app.get_graph().draw_mermaid_png(
-    #         draw_method=MermaidDrawMethod.API,
-    #     )
-    # )
-    # with open(img_name, "wb") as f:
-    #     f.write(img.data)
-
+    img_name = "{}.png".format(__file__.split("/")[-1])
+    print("save the graph to local file {}".format(img_name))
+    app.get_graph().draw_png(img_name)
     user_question = "查询姓名为 Manoj 的客户地址"
     print("invoke question: {}".format(user_question))
     messages = app.invoke(

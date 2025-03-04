@@ -25,11 +25,12 @@ def get_graph() -> "CompiledStateGraph":
 
 
 if __name__ == "__main__":
+    file_name = "{}.png".format(__file__.split("/")[-1])
     my_graph = get_graph()
-    print("save graph as png file to local")
-    my_graph.get_graph().draw_png("agent.png")
+    print('save graph as png format to local file "{}"'.format(file_name))
+    my_graph.get_graph().draw_png(file_name)
 
-    user_input = '介绍你自己'
+    user_input = '介绍你自己的模型名称、量化参数、部署需要的资源等'
     print("execute graph for user input: {}".format(user_input))
     for event in my_graph.stream(user_input):
         for value in event.values():
