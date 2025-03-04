@@ -16,3 +16,4 @@ native-image/*
 faiss_index/*
 **/*.txt
 **/*.db
+**/*.png

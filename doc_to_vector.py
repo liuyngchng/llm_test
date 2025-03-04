@@ -70,4 +70,7 @@ if __name__ == "__main__":
     # print(a)
 
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
+    a = "hello"
+    a += " world"
+    a
     vectoring()
