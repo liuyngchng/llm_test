@@ -164,8 +164,8 @@ def query_gen_node(state: State):
 
 # Define a conditional edge to decide whether to continue or end the workflow
 def should_continue(state: State) -> Literal[END, "correct_query", "query_gen"]:
-    messages = state["messages"]
-    last_message = messages[-1]
+    chk_msg = state["messages"]
+    last_message = chk_msg[-1]
     # If there is a tool call, then we finish
     if getattr(last_message, "tool_calls", None):
         return END
