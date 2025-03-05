@@ -299,14 +299,14 @@ if __name__ == "__main__":
     print("save the graph to local file {}".format(img_name))
     app.get_graph().draw_png(img_name)
     user_question = "查询姓名为 Manoj 的客户地址"
-    print("invoke question: {}".format(user_question))
+    print("question is: {}".format(user_question))
     messages = app.invoke(
         {"messages": [("user", user_question)]}, {"recursion_limit":100 }
     )
     # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
     json_str = messages["messages"][-1].content
-    print("SQL is : {}".format(json_str))
-    print("answer is: {}".format(db.run(json_str)[0]))
+    # print("SQL is : {}".format(json_str))
+    print("answer is: {}".format(db.run(json_str)))
 
 
     # for event in app.stream(
