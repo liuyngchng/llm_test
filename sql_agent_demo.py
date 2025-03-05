@@ -162,9 +162,6 @@ def should_continue(state: State) -> Literal[END, "correct_query", "query_gen"]:
     # else:
     #     return "correct_query"
 
-def get_data(my_db: SQLDatabase, sql: str) -> str:
-    result = my_db.run(sql)
-    return result
 if __name__ == "__main__":
     # use SQLite DB
     db = SQLDatabase.from_uri("sqlite:///test2.db")
@@ -306,7 +303,7 @@ if __name__ == "__main__":
     # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
     json_str = messages["messages"][-1].content
     # print("SQL is : {}".format(json_str))
-    print("answer is: {}".format(db.run(json_str)))
+    print("answer is: {}".format(db_query_tool.invoke(json_str)))
 
 
     # for event in app.stream(
