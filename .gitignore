@@ -17,3 +17,4 @@ faiss_index/*
 **/*.txt
 **/*.db
 **/*.png
+**/*.csv

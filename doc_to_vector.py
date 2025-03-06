@@ -18,7 +18,7 @@ import os
 def vectoring():
     # knowledge_dir = "/home/rd/software/ollama_models/test/"
     # knowledge_dir = "/home/rd/workspace/ind-mt/mt-cmn/src/main/java/cm/iot/cmn/"
-    knowledge_file = "./1.txt"
+    knowledge_file = "./1.csv"
     model_file = "../bge-large-zh-v1.5"
     vector_file = "./faiss_index"
 
