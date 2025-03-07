@@ -18,7 +18,7 @@ def req(question):
     :return:
     """
     question = "hi"
-    model_name = "deepseekR17B"
+    model_name = "llama3.2:3b"
     llm_url = "http://127.0.0.1:11434"
 
     # 加载配置
@@ -29,8 +29,8 @@ def req(question):
     llm = OllamaLLM(model=model_name, base_url=llm_url)
     logger.info("invoke question: {}".format(question))
     answer = llm.invoke(question)
-    logger.info("answer is {}".format(answer))
+    logger.info("answer is: {}".format(answer))
 
 if __name__ == "__main__":
-    _set_env("OPENAI_API_KEY")
+    #_set_env("OPENAI_API_KEY")
     req("hi")

@@ -16,7 +16,7 @@ def req_with_vector_db():
     api_url = "http://127.0.0.1:11434"
     faiss_index = "./faiss_index"
     question = "巴拉巴拉小魔仙是什么？"
-    llm_name = "deepseekR17B"
+    llm_name = "llama3.2:3b"
 
     # 加载配置
     logging.config.fileConfig('logging.conf')
