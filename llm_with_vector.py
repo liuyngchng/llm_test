@@ -16,7 +16,8 @@ def req_with_vector_db():
     api_url = "http://127.0.0.1:11434"
     faiss_index = "./faiss_index"
     question = "巴拉巴拉小魔仙是什么？"
-    llm_name = "llama3.1:8b"
+    #llm_name = "llama3.1:8b"
+    llm_name = "llama3.2:3b-text-q5_K_M"
     #llm_name = "deepseek-r1:7b"
 
     # 加载配置
