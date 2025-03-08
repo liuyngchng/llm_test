@@ -1,4 +1,6 @@
 #! /usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import logging.config
 from langchain_ollama import OllamaLLM
 

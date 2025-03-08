@@ -1,4 +1,5 @@
 #! /usr/bin/python3
+# -*- coding: utf-8 -*-
 
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.utilities import SQLDatabase

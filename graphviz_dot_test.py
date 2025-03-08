@@ -1,4 +1,6 @@
 #! /usr/bin/python3
+# -*- coding: utf-8 -*-
+
 from langgraph.graph import StateGraph
 from langgraph.constants import START, END
 import graphviz

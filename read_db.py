@@ -1,4 +1,6 @@
 #! /usr/bin/python3
+# -*- coding: utf-8 -*-
+
 """
 详见  https://langchain-ai.github.io/langgraph/tutorials/sql-agent/
 """
