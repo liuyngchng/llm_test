@@ -19,7 +19,8 @@ def vectoring():
     # knowledge_dir = "/home/rd/software/ollama_models/test/"
     # knowledge_dir = "/home/rd/workspace/ind-mt/mt-cmn/src/main/java/cm/iot/cmn/"
     knowledge_file = "./1.txt"
-    model_file = "../bge-large-zh-v1.5"
+    # bge-large-zh-v1.5 中文分词模型，由于国内网络环境的问题，需要通过科学上网解决，或网络搜索从其他源获取
+    embedding_model = "../bge-large-zh-v1.5"
     vector_file = "./faiss_index"
 
     # 加载配置
@@ -48,9 +49,9 @@ def vectoring():
     texts = text_splitter.split_documents(documents)
 
     # 加载Embedding模型，进行自然语言处理
-    logger.info("load embedding model")
+    logger.info("load embedding model: {}".format(embedding_model))
     embeddings = HuggingFaceEmbeddings(
-        model_name=model_file,
+        model_name=embedding_model,
         cache_folder='./bge-cache'
     )
 
@@ -70,4 +71,7 @@ if __name__ == "__main__":
     # print(a)
 
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
+    a = "hello"
+    a += " world"
+    a
     vectoring()
