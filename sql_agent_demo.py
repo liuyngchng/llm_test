@@ -294,8 +294,8 @@ if __name__ == "__main__":
     # Compile the workflow into a runnable
     app = workflow.compile()
     img_name = "{}.png".format(__file__.split("/")[-1])
-    print("save the graph to local file {}".format(img_name))
-    app.get_graph().draw_png(img_name)
+    #print("save the graph to local file {}".format(img_name))
+    #app.get_graph().draw_png(img_name)
     user_question = "查询姓名为 Manoj 的客户地址"
     print("question is: {}".format(user_question))
     messages = app.invoke(
