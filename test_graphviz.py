@@ -1,4 +1,6 @@
-#! /usr/bin/python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from langgraph.graph import StateGraph, START, END
 from langchain_ollama import OllamaLLM
 from langgraph.graph.state import CompiledStateGraph

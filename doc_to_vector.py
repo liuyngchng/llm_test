@@ -1,23 +1,24 @@
-#! /usr/bin/python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 """
 将本地文档进行向量化，形成矢量数据库文件，用于 LLM 进行 RAG
 """
 
 from langchain_community.document_loaders import TextLoader
-from langchain_unstructured import UnstructuredLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import DirectoryLoader
-from langchain_core.documents import Document
+# from langchain_unstructured import UnstructuredLoader
+# from langchain_community.document_loaders import DirectoryLoader
+# from langchain_core.documents import Document
 
 import logging.config
 import os
 
 
 def vectoring():
-    # knowledge_dir = "/home/rd/software/ollama_models/test/"
-    # knowledge_dir = "/home/rd/workspace/ind-mt/mt-cmn/src/main/java/cm/iot/cmn/"
+    # knowledge_dir = "../test/"
     knowledge_file = "./1.txt"
     # bge-large-zh-v1.5 中文分词模型，国内网络环境可以通过 https://modelscope.cn/models/BAAI/bge-large-zh-v1.5 下载
     embedding_model = "../bge-large-zh-v1.5"

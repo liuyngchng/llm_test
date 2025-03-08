@@ -1,4 +1,5 @@
-#! /usr/bin/python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 from pydantic import BaseModel, Field
 from langchain_ollama.chat_models import ChatOllama

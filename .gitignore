@@ -15,5 +15,6 @@ native-image/*
 **/*.o
 faiss_index/*
 **/*.txt
+!requirements.txt
 **/*.png
 **/*.csv
