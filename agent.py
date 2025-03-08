@@ -13,6 +13,10 @@ def chatbot(d):
     return {"messages": [llm.invoke(d)]}
 
 if __name__ == "__main__":
+    """
+    a agent for a LLM ,just define a graph with a single node to chat with ollamaLLM
+    the graph for workflow can be extended for other purpose.
+    """
     # 创建一个 StateGraph 对象
     graph_builder = StateGraph(dict)
     # 定义图的入口和边

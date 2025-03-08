@@ -30,4 +30,7 @@ def get_chain():
     chain.get_graph().print_ascii()
 
 if __name__ == "__main__" :
+    """
+    output a chain workflow as ascii text in std out.
+    """
     get_chain()

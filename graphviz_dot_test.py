@@ -37,4 +37,7 @@ def get_graph():
 
 
 if __name__ == "__main__":
+    """
+    a stage grave output test which is not finished yet.
+    """
     get_graph()

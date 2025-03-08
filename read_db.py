@@ -119,6 +119,9 @@ def get_schema(jdbc_uri, llm_name, api_url):
 
 
 if __name__ == "__main__":
+    """
+    use a LLM tool call to retrieve information in database sqlite.
+    """
     db_uri = "sqlite:///test.db"
     # llm_name_str = "deepseekR17B"
 

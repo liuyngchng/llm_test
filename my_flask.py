@@ -58,6 +58,6 @@ def get_data():
 
 if __name__ == '__main__':
     """
-    just for test， 生产环境不建议这么做
+    just for test, not for a production environment.
     """
     app.run(host='0.0.0.0', port=19000)

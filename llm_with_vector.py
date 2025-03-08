@@ -51,4 +51,9 @@ def req_with_vector_db():
 
 
 if __name__ == "__main__":
+    """
+    ask the LLM for some private question not public to outside,
+    let LLM retrieve the information from local vector database, 
+    and the output the answer.
+    """
     req_with_vector_db()

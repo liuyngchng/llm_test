@@ -164,6 +164,13 @@ def should_continue(state: State) -> Literal[END, "correct_query", "query_gen"]:
     #     return "correct_query"
 
 if __name__ == "__main__":
+    """
+    A SQL agent demo.
+    give LLM a JDBC uri, let it get the database and table schema.
+    LLM read the database schema, and get the information.
+    a question input about the information in DB will be turned into a SQL query,
+    then data retrieved from DB returned back from LLM.
+    """
     # use SQLite DB
     db = SQLDatabase.from_uri("sqlite:///test2.db")
 

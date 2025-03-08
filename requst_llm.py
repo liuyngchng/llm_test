@@ -34,5 +34,8 @@ def req(question):
     logger.info("answer is: {}".format(answer))
 
 if __name__ == "__main__":
+    """
+    A hello LLM demo for request LLM.
+    """
     #_set_env("OPENAI_API_KEY")
     req("hi")
