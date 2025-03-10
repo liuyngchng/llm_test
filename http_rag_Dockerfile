@@ -7,7 +7,9 @@ RUN ulimit -n 65535
 RUN pip install --upgrade pip
 RUN pip3 cache dir
 RUN pip3 install -r requirements.txt 
+RUN pip3 install gunicorn
 
 COPY . .
-
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "test_flask:app"]
+WORKDIR /opt/llm_agen 
+CMD ["./start.sh"]
+#CMD ["gunicorn", "-b", "0.0.0.0:19000", "test_flask:app"]

@@ -5,7 +5,7 @@ Have fun, enjoy life !
 #2. intro
 
  (1)http_rag.py, a RAG demo, you can input question in URI `http://localhost:19000`;
- 
+
  (2)sql_agent.py is a SQL agent demo.
 
 #3. build docker file
