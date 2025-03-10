@@ -22,10 +22,10 @@ def get_chain():
         ])
 
     chain = prompt_template | chat_model
-    chain.invoke(
-        {"query": joke_query,
-         "format_instructions": chat_model.get_output_schema()
-         })
+    #chain.invoke(
+    #    {"query": joke_query,
+    #     "format_instructions": chat_model.get_output_schema()
+    #     })
     print("print ascii of the chain")
     chain.get_graph().print_ascii()
 
