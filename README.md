@@ -8,7 +8,13 @@ Have fun, enjoy life !
  
  (2)sql_agent.py is a SQL agent demo.
 
-#3. docker run
+#3. build docker file
+
+```sh
+docker build -f ./myDockerfile ./ -t myimg:1.0.0
+```
+
+#4. docker run
 
 package all your pip package in a docker images name llm with version 1.0.
 
