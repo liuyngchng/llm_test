@@ -19,7 +19,6 @@ def req(question):
     :param question:
     :return:
     """
-    question = "hi"
     model_name = "llama3.2:3b"
     llm_url = "http://127.0.0.1:11434"
 
